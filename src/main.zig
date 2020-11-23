@@ -1,4 +1,7 @@
 const std = @import("std");
+const vector = @import("./vector.zig");
+const vec3f = vector.vec3f;
+const Color = vector.Color;
 const expect = std.testing.expect;
 const mem = std.mem;
 const heap = std.heap;
@@ -19,40 +22,15 @@ fn ppm_header(allocator: *std.mem.Allocator, w: usize, h: usize) ![]const u8 {
 // R G B\n --> 255 100 200\n --> 9 u8 for RGB + 2 for spaces + 1 for new line
 const px_mem_size: usize = 3 * 3 + 2 * 1 + 1;
 
-/// leftpad spaces to number, if necessary, so "9" becomes "  9"
-fn color_str(allocator: *std.mem.Allocator, value: u8) ![]const u8 {
-    const slice = try allocator.alloc(u8, 3);
-    switch (value) {
-        0...9 => {
-            return try fmt.bufPrint(slice, "  {}", .{value});
-        },
-        10...99 => {
-            return try fmt.bufPrint(slice, " {}", .{value});
-        },
-        else => {
-            return try fmt.bufPrint(slice, "{}", .{value});
-        },
-    }
-}
-
-/// Convert RGB values in a ASCII-coded line of text
-fn rgb_to_ascii_line(allocator: *std.mem.Allocator, r: u8, g: u8, b: u8) ![]const u8 {
-    const slice = try allocator.alloc(u8, px_mem_size);
-    const rs = color_str(allocator, r);
-    const gs = color_str(allocator, g);
-    const bs = color_str(allocator, b);
-    return try fmt.bufPrint(slice, "{} {} {}\n", .{rs, gs, bs});
-}
-
 /// Generate a PPM image file of w width and h height, in pixels
 fn render_ppm_image(w: usize, h: usize) ![]const u8 {
     log.info("Generating {}x{} .ppm image", .{ w, h });
-    log.info("PPM header size: {}", .{ header_mem_size });
-    log.info("px_mem_size: {}", .{ px_mem_size });
+    log.info("PPM header size: {}", .{header_mem_size});
+    log.info("px_mem_size: {}", .{px_mem_size});
     const data_mem_size: usize = px_mem_size * w * h;
-    log.info("data_size: {}", .{ data_mem_size });
+    log.info("data_size: {}", .{data_mem_size});
     const total_mem_size: usize = header_mem_size + data_mem_size;
-    log.info("total_mem_size: {}", .{ total_mem_size });
+    log.info("total_mem_size: {}", .{total_mem_size});
     // var buffer: [total_mem_size]u8 = undefined;
     var buffer: [786447]u8 = undefined;
 
@@ -81,6 +59,7 @@ fn render_ppm_image(w: usize, h: usize) ![]const u8 {
         // log.debug("computing row {}/{}...", .{ i_row + 1, h });
         var i_col: usize = 0;
         while (i_col < w) : (i_col += 1) {
+            // these RGB values are between 0.0 and 1.0
             const r = @intToFloat(f32, i_col) / @intToFloat(f32, w - 1);
             const g = @intToFloat(f32, i_row) / @intToFloat(f32, h - 1);
             const b = 0.25;
@@ -98,10 +77,13 @@ fn render_ppm_image(w: usize, h: usize) ![]const u8 {
 
             const offset: usize = i_px * px_mem_size;
             // log.debug("i_px {}, offset {}", .{i_px, offset});
-            
-            const ascii_line = try rgb_to_ascii_line(&arena_allocator.allocator, ir, ig, ib);
-            mem.copy(u8, slice[header_mem_size+offset..], ascii_line);
-            i_px +=1;
+
+            // const ascii_line = try rgb_to_ascii_line(&arena_allocator.allocator, ir, ig, ib);
+            const col = Color.new(255.999 * r, 255.999 * g, 255.999 * b);
+            // log.debug("Color {}", .{col});
+            const ascii_line = try col.toAsciiLine(&arena_allocator.allocator);
+            mem.copy(u8, slice[header_mem_size + offset ..], ascii_line);
+            i_px += 1;
         }
     }
     return slice;
@@ -111,5 +93,5 @@ pub fn main() anyerror!void {
     const slice = try render_ppm_image(256, 256);
     const filepath = "images/test-image.ppm";
     try fs.cwd().writeFile(filepath, slice);
-    log.info("wrote {}", .{ filepath });
+    log.info("wrote {}", .{filepath});
 }
