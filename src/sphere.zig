@@ -1,4 +1,5 @@
 const std = @import("std");
+const math = std.math;
 const assert = std.debug.assert;
 const vector = @import("./vector.zig");
 const Vec3f = vector.Vec3f;
@@ -30,14 +31,25 @@ pub const Sphere = struct {
     /// t^2 * D^2 + 2 * t * D * (O - C) + (O - C) * (O - C) = r^2
     /// which can be simplified into:
     /// (t*D + O - C)^2 = r^2
-    pub fn is_hit(self: Self, ray: Ray) bool {
+    pub fn is_hit(self: Self, ray: Ray) f32 {
         const oc = ray.origin.sub(self.center);
-        const a = vector.dot(ray.direction, ray.direction);
-        const b = vector.dot(oc, ray.direction) * 2.0;
-        const c = vector.dot(oc, oc) - self.radius * self.radius;
-        const discriminant = b * b - 4 * a * c;
+        // const a = vector.dot(ray.direction, ray.direction);
+        // The dot product of a vector with itself gives the length squared of
+        // that vector.
+        const a = ray.direction.lengthSquared();
+        // const b = vector.dot(oc, ray.direction) * 2.0;
+        const half_b = vector.dot(oc, ray.direction);
+        // const c = vector.dot(oc, oc) - self.radius * self.radius;
+        const c = oc.lengthSquared() - self.radius * self.radius;
+        // const discriminant = b * b - 4 * a * c;
+        const discriminant = half_b * half_b - a * c;
         // std.debug.print("discriminant: {}\n", .{discriminant});
-        return discriminant > 0;
+        if (discriminant < 0.0) {
+            return -1.0;
+        } else {
+            // return (-b - math.sqrt(discriminant) ) / (2.0*a);
+            return (-half_b - math.sqrt(discriminant)) / a;
+        }
     }
 };
 
@@ -63,8 +75,9 @@ test "Sphere.is_hit" {
     const dir_2 = Vec3f.new(0.0, 1.0, 0.0);
     const ray_1 = Ray.new(ray_origin, dir_1);
     const ray_2 = Ray.new(ray_origin, dir_2);
-    expectEqual(sphere.is_hit(ray_1), true);
-    expectEqual(sphere.is_hit(ray_2), false);
+    const x = sphere.is_hit(ray_1);
+    expect(x != -1.0);
+    expectEqual(sphere.is_hit(ray_2), -1.0);
     // TODO: the ray is a half-line, so this ray should NOT hit the sphere
     // because it is traveling in the opposite direction.
     // const dir_3 = Vec3f.new(0.0, 0.0, 1.0);
