@@ -3,7 +3,9 @@ const vector = @import("./vector.zig");
 const Camera = @import("./camera.zig").Camera;
 const Ray = @import("./ray.zig").Ray;
 const Sphere = @import("./sphere.zig").Sphere;
+const World = @import("./sphere.zig").World;
 const utils = @import("./utils.zig");
+const constants = @import("./constants.zig");
 const Vec3f = vector.Vec3f;
 const Color = vector.Color;
 const mem = std.mem;
@@ -68,7 +70,12 @@ fn render_ppm_image(w: usize, h: usize) ![]const u8 {
     // a sphere centered in the viewport (the camera eye is 0,0,0)
     const center = Vec3f.new(0, 0, -1);
     const radius = 0.5;
-    const sphere = Sphere.new(center, radius);
+
+    var world = World.init(allocator);
+    defer world.deinit();
+
+    try world.spheres.append(Sphere.new(Vec3f.new(0, 0, -1), radius));
+    try world.spheres.append(Sphere.new(Vec3f.new(0, -100.5, -1), 100));
 
     const blend_start = Vec3f.new(1.0, 1.0, 1.0); // white
     const blend_stop = Vec3f.new(0.5, 0.7, 1.0); // blue
@@ -95,7 +102,10 @@ fn render_ppm_image(w: usize, h: usize) ![]const u8 {
             var b: f32 = 0.0;
             var g: f32 = 0.0;
 
-            const maybe_hit = sphere.is_hit(ray, 0.001, 10000.0);
+            const t_min = 0;
+            const t_max = constants.inf;
+
+            const maybe_hit = world.is_hit(ray, t_min, t_max);
             // std.debug.print("t: {}\n", .{t});
             if (maybe_hit) |hit| {
                 const n = vector.unitVector(ray.pointAt(hit.t).sub(Vec3f.new(0.0, 0.0, -1.0)));

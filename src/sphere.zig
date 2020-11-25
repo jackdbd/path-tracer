@@ -1,5 +1,8 @@
 const std = @import("std");
+const ArrayList = std.ArrayList;
+const heap = std.heap;
 const math = std.math;
+const mem = std.mem;
 const assert = std.debug.assert;
 const vector = @import("./vector.zig");
 const Vec3f = vector.Vec3f;
@@ -10,8 +13,8 @@ pub const HitRecord = struct {
     n: Vec3f, // surface normal
     t: f32, // the hit counts only if tmin < t < tmax
     front_face: bool, // whether the object was hit on the front face (i.e. by
-                      // an external ray) or on the back face (i.e. by an
-                      // internal ray).
+    // an external ray) or on the back face (i.e. by an
+    // internal ray).
 };
 
 pub fn is_front_face(ray: Ray, outward_normal: Vec3f) bool {
@@ -88,6 +91,36 @@ pub const Sphere = struct {
     }
 };
 
+pub const World = struct {
+    spheres: ArrayList(Sphere),
+
+    const Self = @This();
+
+    pub fn init(allocator: *mem.Allocator) Self {
+        return Self{ .spheres = ArrayList(Sphere).init(allocator) };
+    }
+
+    pub fn deinit(self: *Self) void {
+        self.spheres.deinit();
+    }
+
+    pub fn is_hit(self: *const Self, ray: Ray, t_min: f32, t_max: f32) ?HitRecord {
+        var maybe_hit: ?HitRecord = null;
+        var closest_so_far = t_max;
+
+        for (self.spheres.items) |sphere| {
+            if (sphere.is_hit(ray, t_min, t_max)) |hit_rec| {
+                if (hit_rec.t < closest_so_far) {
+                    maybe_hit = hit_rec;
+                    closest_so_far = hit_rec.t;
+                }
+            }
+        }
+
+        return maybe_hit;
+    }
+};
+
 const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 
@@ -121,4 +154,22 @@ test "Sphere.is_hit" {
     // const dir_3 = Vec3f.new(0.0, 0.0, 1.0);
     // const ray_3 = Ray.new(ray_origin, dir_3);
     // expectEqual(sphere.is_hit(ray_3), false);
+}
+
+test "World.init" {
+    const allocator = heap.page_allocator;
+    var world = World.init(allocator);
+    // var arena_allocator = heap.ArenaAllocator.init(allocator);
+    // defer arena_allocator.deinit();
+    // var world = World.init(&arena_allocator.allocator);
+    defer world.deinit();
+    const r = 10.0; // radius
+    // std.debug.print("\nBefore:\n{}\n", .{world.spheres});
+    try world.spheres.append(Sphere.new(Vec3f.new(0.0, 10.0, -1.0), r));
+    try world.spheres.append(Sphere.new(Vec3f.new(10.0, 0.0, -1.0), r * 2.0));
+    try world.spheres.append(Sphere.new(Vec3f.new(10.0, 10.0, -1.0), r / 2.0));
+    // for (world.spheres.items) |sphere| {
+    //     std.debug.print("\nSphere:\n{}\n", .{sphere});
+    // }
+    expectEqual(world.spheres.items.len, 3);
 }
