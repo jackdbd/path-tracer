@@ -5,6 +5,22 @@ const vector = @import("./vector.zig");
 const Vec3f = vector.Vec3f;
 const Ray = @import("./ray.zig").Ray;
 
+pub const HitRecord = struct {
+    p: Vec3f, // 3D point hit by a ray
+    n: Vec3f, // surface normal
+    t: f32, // the hit counts only if tmin < t < tmax
+    front_face: bool, // whether the object was hit on the front face (i.e. by
+                      // an external ray) or on the back face (i.e. by an
+                      // internal ray).
+};
+
+pub fn is_front_face(ray: Ray, outward_normal: Vec3f) bool {
+    const front_face = vector.dot(ray.direction, outward_normal) < 0;
+    // std.debug.print("front_face: {}\n", .{front_face});
+    // normal = front_face ? outward_normal :-outward_normal;
+    return front_face;
+}
+
 pub const Sphere = struct {
     center: Vec3f,
     radius: f32,
@@ -31,7 +47,7 @@ pub const Sphere = struct {
     /// t^2 * D^2 + 2 * t * D * (O - C) + (O - C) * (O - C) = r^2
     /// which can be simplified into:
     /// (t*D + O - C)^2 = r^2
-    pub fn is_hit(self: Self, ray: Ray) f32 {
+    pub fn is_hit(self: Self, ray: Ray, t_min: f32, t_max: f32) ?HitRecord {
         const oc = ray.origin.sub(self.center);
         // const a = vector.dot(ray.direction, ray.direction);
         // The dot product of a vector with itself gives the length squared of
@@ -45,10 +61,29 @@ pub const Sphere = struct {
         const discriminant = half_b * half_b - a * c;
         // std.debug.print("discriminant: {}\n", .{discriminant});
         if (discriminant < 0.0) {
-            return -1.0;
+            return null;
         } else {
             // return (-b - math.sqrt(discriminant) ) / (2.0*a);
-            return (-half_b - math.sqrt(discriminant)) / a;
+            const sqrtd = math.sqrt(discriminant);
+            const x1 = (-half_b - sqrtd) / a;
+            const x2 = (-half_b + sqrtd) / a;
+
+            // For now let's ignore the solution x2
+            const t = x1;
+            if (t < t_max and t > t_min) {
+                const p = ray.pointAt(t);
+                const outward_normal = p.sub(self.center).mul(1.0 / self.radius);
+                const front_face = is_front_face(ray, outward_normal);
+
+                return HitRecord{
+                    .p = p,
+                    .n = outward_normal,
+                    .t = t,
+                    .front_face = front_face,
+                };
+            } else {
+                return null;
+            }
         }
     }
 };
@@ -75,9 +110,12 @@ test "Sphere.is_hit" {
     const dir_2 = Vec3f.new(0.0, 1.0, 0.0);
     const ray_1 = Ray.new(ray_origin, dir_1);
     const ray_2 = Ray.new(ray_origin, dir_2);
-    const x = sphere.is_hit(ray_1);
-    expect(x != -1.0);
-    expectEqual(sphere.is_hit(ray_2), -1.0);
+    const t_min = 0.001;
+    const t_max = 10000.0;
+
+    const x = sphere.is_hit(ray_1, t_min, t_max);
+    // expect(x != -1.0);
+    expectEqual(sphere.is_hit(ray_2, t_min, t_max), null);
     // TODO: the ray is a half-line, so this ray should NOT hit the sphere
     // because it is traveling in the opposite direction.
     // const dir_3 = Vec3f.new(0.0, 0.0, 1.0);

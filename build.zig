@@ -24,4 +24,14 @@ pub fn build(b: *Builder) void {
 
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
+
+    // const tests = b.addTest("src/camera.zig");
+    // tests = b.addTest("src/ray.zig");
+    const tests = b.addTest("src/sphere.zig");
+    // tests = b.addTest("src/utils.zig");
+    // tests = b.addTest("src/vector.zig");
+    tests.setBuildMode(mode);
+
+    const test_step = b.step("test", "Run tests");
+    test_step.dependOn(&tests.step);
 }

@@ -27,3 +27,9 @@ Format all zig code
 ```sh
 zig fmt src
 ```
+
+Run all tests
+
+```sh
+zig build test
+```

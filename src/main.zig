@@ -95,9 +95,10 @@ fn render_ppm_image(w: usize, h: usize) ![]const u8 {
             var b: f32 = 0.0;
             var g: f32 = 0.0;
 
-            const t = sphere.is_hit(ray);
-            if (t > 0.0) {
-                const n = vector.unitVector(ray.pointAt(t).sub(Vec3f.new(0.0, 0.0, -1.0)));
+            const maybe_hit = sphere.is_hit(ray, 0.001, 10000.0);
+            // std.debug.print("t: {}\n", .{t});
+            if (maybe_hit) |hit| {
+                const n = vector.unitVector(ray.pointAt(hit.t).sub(Vec3f.new(0.0, 0.0, -1.0)));
                 // std.debug.print("Sphere n: {}\n", .{n});
                 r = 0.5 * (n.x + 1.0);
                 g = 0.5 * (n.y + 1.0);
