@@ -1,6 +1,8 @@
 const std = @import("std");
 const vector = @import("./vector.zig");
 const Camera = @import("./camera.zig").Camera;
+const Ray = @import("./ray.zig").Ray;
+const Sphere = @import("./sphere.zig").Sphere;
 const utils = @import("./utils.zig");
 const Vec3f = vector.Vec3f;
 const Color = vector.Color;
@@ -23,9 +25,12 @@ fn ppm_header(allocator: *std.mem.Allocator, w: usize, h: usize) ![]const u8 {
 // R G B\n --> 255 100 200\n --> 9 u8 for RGB + 2 for spaces + 1 for new line
 const px_mem_size: usize = 3 * 3 + 2 * 1 + 1;
 
+// aspect ratio
+const aspect = 16.0 / 9.0;
+
 /// Generate a PPM image file of w width and h height, in pixels
 fn render_ppm_image(w: usize, h: usize) ![]const u8 {
-    log.info("Generating {}x{} .ppm image", .{ w, h });
+    log.info("Generating W:{} x H:{} .ppm image", .{ w, h });
     log.info("PPM header size: {}", .{header_mem_size});
     log.info("px_mem_size: {}", .{px_mem_size});
     const data_mem_size: usize = px_mem_size * w * h;
@@ -55,15 +60,15 @@ fn render_ppm_image(w: usize, h: usize) ![]const u8 {
     // const count = fmt.count("P3\n{} {}\n255\n", .{ w, h });
     // std.debug.print("fmt.count: {}\n", .{count});
 
-    const aspect = 16.0 / 9.0;
     const vh = 2.0;
     const focal_length = 1.0;
     const camera = Camera.new(Vec3f.zero(), aspect, vh, focal_length);
-    std.debug.print("Camera: {}\n", .{camera});
+    // std.debug.print("Camera: {}\n", .{camera});
 
-    const image_width: i32 = 400;
-    const image_height = @floatToInt(i32, @intToFloat(f32, image_width) / aspect);
-    log.debug("image_height {}", .{ image_height });
+    // a sphere centered in the viewport (the camera eye is 0,0,0)
+    const center = Vec3f.new(0, 0, -1);
+    const radius = 0.5;
+    const sphere = Sphere.new(center, radius);
 
     const blend_start = Vec3f.new(1.0, 1.0, 1.0); // white
     const blend_stop = Vec3f.new(0.5, 0.7, 1.0); // blue
@@ -80,15 +85,27 @@ fn render_ppm_image(w: usize, h: usize) ![]const u8 {
             // const r = @intToFloat(f32, i_col) / @intToFloat(f32, w - 1);
             // const g = @intToFloat(f32, i_row) / @intToFloat(f32, h - 1);
             // const b = 0.25;
-
-            const u = @intToFloat(f32, i_col) / @intToFloat(f32, image_width-1);
-            const v = @intToFloat(f32, h - 1 - i_row) / @intToFloat(f32, image_height-1);
+            const u = @intToFloat(f32, i_col) / @intToFloat(f32, w - 1);
+            const v = @intToFloat(f32, h - 1 - i_row) / @intToFloat(f32, h - 1);
 
             const p = camera.lower_left_corner.add(camera.horizontal.mul(u).add(camera.vertical.mul(v)).sub(camera.origin));
-            const blended = utils.lerp(p, blend_start, blend_stop);
-            const r = blended.x;
-            const g = blended.y;
-            const b = blended.z;
+            const ray = Ray.new(camera.origin, p);
+
+            var r: f32 = 0.0;
+            var b: f32 = 0.0;
+            var g: f32 = 0.0;
+
+            if (sphere.is_hit(ray)) {
+                // std.debug.print("Sphere hit: {}\n", .{ray});
+                r = 1.0;
+                g = 0.0;
+                b = 0.0;
+            } else {
+                const blended = utils.lerp(p, blend_start, blend_stop);
+                r = blended.x;
+                g = blended.y;
+                b = blended.z;
+            }
 
             const ir = @floatToInt(u8, 255.999 * r);
             // const ir: u8 = 255;
@@ -119,7 +136,8 @@ pub fn main() anyerror!void {
     // const w = try utils.ask_user();
     // const h = try utils.ask_user();
     const w = 512;
-    const h = 256;
+    // const h = 256;
+    const h = @floatToInt(i32, @intToFloat(f32, w) / aspect);
     const slice = try render_ppm_image(w, h);
     const filepath = "images/test-image.ppm";
     try fs.cwd().writeFile(filepath, slice);

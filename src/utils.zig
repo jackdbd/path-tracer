@@ -35,7 +35,7 @@ const expectEqual = std.testing.expectEqual;
 
 test "lerp" {
     const direction = Vec3f.new(3.0, 3.0, 0.0);
-    const start = Vec3f.new(1.0, 1.0, 1.0);  // white
+    const start = Vec3f.new(1.0, 1.0, 1.0); // white
     const stop = Vec3f.new(0.5, 0.7, 1.0); // blue
     const v = lerp(direction, start, stop);
     expect(v.x > 0.0 and v.x < 1.0);

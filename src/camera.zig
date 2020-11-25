@@ -26,9 +26,9 @@ pub const Camera = struct {
         assert(vh > 0.0);
 
         const vw = vh * aspect_ratio;
-        std.debug.print("Aspect Ratio: {}\n", .{aspect_ratio});
-        std.debug.print("Focal Length: {}\n", .{focal_length});
-        std.debug.print("Viewport W: {}, H {}\n", .{ vw, vh });
+        // std.debug.print("Aspect Ratio: {}\n", .{aspect_ratio});
+        // std.debug.print("Focal Length: {}\n", .{focal_length});
+        // std.debug.print("Viewport W: {}, H {}\n", .{ vw, vh });
 
         const half_vw = Vec3f.new(vw / 2.0, 0.0, 0.0);
         const half_vh = Vec3f.new(0.0, vh / 2.0, 0.0);
