@@ -1,1 +1,5 @@
 zig-cache/
+images/*
+!images/README.md
+!images/demo.ppm
+.vscode/
