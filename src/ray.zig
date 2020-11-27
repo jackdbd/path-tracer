@@ -1,8 +1,5 @@
 const std = @import("std");
-const vector = @import("./vector.zig");
-const Color = vector.Color;
-const Vec3 = vector.Vec3;
-const Vec3f = vector.Vec3f;
+const Vec3f = @import("vec3.zig").Vec3f;
 
 /// The ray that is casted from an origin, alongside a direction.
 pub const Ray = struct {
@@ -27,7 +24,7 @@ const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 
 test "Ray.pointAt" {
-    const r = Ray.new(Vec3f.zero(), Vec3f.one());
+    const r = Ray.new(Vec3f.new(0.0, 0.0, 0.0), Vec3f.new(1.0, 1.0, 1.0));
     const p = r.pointAt(1.0);
     expectEqual(p.x, 1.0);
     expectEqual(p.y, 1.0);

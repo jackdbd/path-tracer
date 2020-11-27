@@ -1,9 +1,7 @@
 const std = @import("std");
 const assert = std.debug.assert;
-const vector = @import("./vector.zig");
-// const Rayf = @import("./ray.zig").Rayf;
-const Vec3 = vector.Vec3;
-const Vec3f = vector.Vec3f;
+const Ray = @import("ray.zig").Ray;
+const Vec3f = @import("vec3.zig").Vec3f;
 
 /// The ray that is casted from an origin, alongside a direction.
 pub const Camera = struct {
@@ -18,7 +16,8 @@ pub const Camera = struct {
 
     const Self = @This();
 
-    /// Create a perspective camera
+    /// Create a perspective camera.
+    ///
     /// origin: the position of the camera. It's the "eye", the position from
     /// where we look at the scene.
     pub fn new(origin: Vec3f, aspect_ratio: f32, vh: f32, focal_length: f32) Self {
@@ -49,7 +48,21 @@ pub const Camera = struct {
             .vertical = Vec3f.new(0.0, vh, 0.0),
         };
     }
+
+    pub fn castRay(self: Self, u: f32, v: f32) Ray {
+        const direction = self.lower_left_corner.add(self.horizontal.mul(u).add(self.vertical.mul(v)).sub(self.origin)).unitVector();
+        return Ray.new(self.origin, direction);
+    }
 };
+
+// pub fn randomInUnitDisk(r: *Random) Self {
+//     return while (true) {
+//         const p = Vec3f.new(2.0 * r.float(f32) - 1.0, 2.0 * r.float(f32) - 1.0, 0.0);
+//         if (p.lengthSquared() < 1.0) {
+//             break p;
+//         }
+//     } else Vec3f.zero();
+// }
 
 const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
@@ -58,7 +71,7 @@ test "Camera.new" {
     const aspect = 16.0 / 9.0;
     const vh = 2.0;
     const focal_length = 1.0;
-    const camera = Camera.new(Vec3f.zero(), aspect, vh, focal_length);
+    const camera = Camera.new(Vec3f.new(0.0, 0.0, 0.0), aspect, vh, focal_length);
     expectEqual(camera.viewport_height, vh);
     expectEqual(camera.viewport_width, vh * aspect);
     expectEqual(camera.aspect_ratio, aspect);
