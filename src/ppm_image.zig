@@ -12,54 +12,14 @@ const Ray = @import("ray.zig").Ray;
 const Camera = @import("camera.zig").Camera;
 const Material = @import("material.zig").Material;
 const RayTracerConfig = @import("raytracer.zig").RayTracerConfig;
+const ThreadContext = @import("multithreading.zig").ThreadContext;
 const epsilon = @import("constants.zig").epsilon;
+const numDigits = @import("utils.zig").numDigits;
 const assert = std.debug.assert;
 
-fn numDigits(num: u32) u8 {
-    var x = num;
-    var count: u8 = 0;
-    while (x != 0) {
-        x /= 10;
-        count += 1;
-    }
-    return count;
-}
-
-/// maximum value for each color in the .ppm image
-pub const max_val = 255;
-
-/// Compute the required memory size for the .ppm image file header.
-///
-/// P3 is 2 characters, namely 2 bytes. w and h can require any number of
-/// characters, 255 is 3 characters, then there are spaces and new lines.
-pub fn header_size(w: u32, h: u32) usize {
-    const n = numDigits(w);
-    return 2 + 1 + numDigits(w) + 1 + numDigits(h) + 1 + numDigits(max_val) + 1;
-}
-
-pub fn header(allocator: *mem.Allocator, w: u32, h: u32) ![]const u8 {
-    const slice = try allocator.alloc(u8, header_size(w, h));
-    // P3 means this is a RGB color image in ASCII.
-    return try fmt.bufPrint(slice, "P3\n{} {}\n255\n", .{ w, h });
-}
-
-/// Compute the required memory size for each ASCII RGB pixel in the .ppm image.
-///
-/// Example: 255 100 200\n
-pub fn px_size() usize {
-    return 3 * numDigits(max_val) + 2 * 1 + 1;
-}
-
-pub fn filepath(allocator: *mem.Allocator, num_scene: u8, subsamples: u8, rays_per_subsample: u8, rebounds: u8) ![]const u8 {
-    const s = "images/scene-{}--subsamples-{}--rays_per_subsample-{}--rebounds-{}.ppm";
-    const n = fmt.count(s, .{ num_scene, subsamples, rays_per_subsample, rebounds });
-    const slice = try allocator.alloc(u8, n + numDigits(num_scene) + numDigits(subsamples) + numDigits(rays_per_subsample) + numDigits(rebounds));
-    return try fmt.bufPrint(slice, s, .{ num_scene, subsamples, rays_per_subsample, rebounds });
-}
-
 /// Convert a color from a numeric value to a padded ASCII string.
-fn colNumToString(allocator: *mem.Allocator, value: u8) ![]const u8 {
-    const slice = try allocator.alloc(u8, numDigits(max_val));
+fn colNumToString(allocator: *mem.Allocator, max_value: u32, value: u8) ![]const u8 {
+    const slice = try allocator.alloc(u8, numDigits(max_value));
     // TODO: adopt generic leftpad algorithm, to pad any number of spaces.
     switch (value) {
         0...9 => {
@@ -74,49 +34,14 @@ fn colNumToString(allocator: *mem.Allocator, value: u8) ![]const u8 {
     }
 }
 
-/// Generate an ASCII representation of a RGB color vector.
-///
-/// This ASCII string represents the color of a pixel in a .ppm image.
-pub fn rgbToAscii(allocator: *mem.Allocator, col: Vec3f) ![]const u8 {
-    const px_mem_size: usize = 3 * numDigits(max_val) + 2 * 1 + 1;
-    const slice = try allocator.alloc(u8, px_mem_size);
-    // defer allocator.free(slice);
-    const r = try colNumToString(allocator, @floatToInt(u8, col.x));
-    const g = try colNumToString(allocator, @floatToInt(u8, col.y));
-    const b = try colNumToString(allocator, @floatToInt(u8, col.z));
-    // defer allocator.free(r);
-    // defer allocator.free(g);
-    // defer allocator.free(b);
-    return try fmt.bufPrint(slice, "{} {} {}\n", .{ r, g, b });
-}
-
-pub fn render(allocator: *mem.Allocator, r: *Random, scene: *Scene, camera: *Camera, cfg: RayTracerConfig, width: u32, height: u32) ![]const u8 {
-    log.debug("render loop: render W:{} x H:{} .ppm image", .{ width, height });
-    const header_mem_size = header_size(width, height);
-    log.debug("PPM header memory size: {}", .{header_mem_size});
-    const px_mem_size = px_size();
-    log.debug("ASCII RGB pixel memory size: {}", .{px_mem_size});
-    const data_mem_size: usize = px_mem_size * width * height;
-    log.debug("Data size (i.e. all pixels in .ppm image): {}", .{data_mem_size});
-    const total_mem_size: usize = header_mem_size + data_mem_size;
-    log.debug("Total memory size for .ppm image: {}", .{total_mem_size});
-
-    const ppm_header = try header(allocator, width, height);
-    const slice = try allocator.alloc(u8, total_mem_size);
-    mem.copy(u8, slice, ppm_header);
-
-    const blend_start = Vec3f.new(1.0, 1.0, 1.0); // white
-    const blend_stop = Vec3f.new(0.5, 0.7, 1.0); // blue
-    // const blend_stop = Vec3f.new(1.0, 0.27, 0.0); // orange
-
-    // This nested loop produces image data in RGB triplets.
-    var idx: u32 = 0;
-    const end_idx = width * height;
-    var progress = std.Progress{};
-    const root_node = try progress.start("Render loop", end_idx + 1);
-    while (idx < end_idx) : (idx += 1) {
-        const i_col = @mod(idx, width);
-        const i_row = @divTrunc(idx, width);
+pub fn render(allocator: *mem.Allocator, slice: []u8, r: *Random, scene: *Scene, camera: *Camera, cfg: *const RayTracerConfig, img: *const Image, istart: u32, istop: u32) !void {
+    // log.debug("render pixels [{}-{})", .{ istart, istop });
+    var idx: u32 = istart;
+    // var progress = std.Progress{};
+    // const root_node = try progress.start("Render loop", istop + 1);
+    while (idx < istop) : (idx += 1) {
+        const i_col = @mod(idx, img.width);
+        const i_row = @divTrunc(idx, img.width);
         // log.debug("idx:{} i_row:{} i_col:{}", .{idx, i_row, i_col});
 
         var sample: @TypeOf(cfg.subpixels) = 0;
@@ -125,31 +50,48 @@ pub fn render(allocator: *mem.Allocator, r: *Random, scene: *Scene, camera: *Cam
             var rps: @TypeOf(cfg.rays_per_subsample) = 0;
             while (rps < cfg.rays_per_subsample) : (rps += 1) {
                 // TODO: double-check the theory of u, v and the indices
-                const u = (@intToFloat(f32, i_col) + r.float(f32)) / @intToFloat(f32, width);
-                const v = (@intToFloat(f32, height - i_row + 1) + r.float(f32)) / @intToFloat(f32, height);
+                const u = (@intToFloat(f32, i_col) + r.float(f32)) / @intToFloat(f32, img.width);
+                const v = (@intToFloat(f32, img.height - i_row + 1) + r.float(f32)) / @intToFloat(f32, img.height);
                 const ray = camera.castRay(u, v, r);
-                // const color_sample = colorNormal(ray, scene, cfg.t_min, cfg.t_max, blend_start, blend_stop);
-                // const color_sample = colorAlbedo(ray, scene, cfg.t_min, cfg.t_max, blend_start, blend_stop);
-                const color_sample = radiance(r, ray, scene, cfg, blend_start, blend_stop, cfg.rebounds);
+                // const color_sample = colorNormal(ray, scene, cfg.t_min, cfg.t_max, img.blend_start, img.blend_stop);
+                // const color_sample = colorAlbedo(ray, scene, cfg.t_min, cfg.t_max, img.blend_start, img.blend_stop);
+                const color_sample = radiance(r, ray, scene, cfg, img.blend_start, img.blend_stop, cfg.rebounds);
                 color_accum = color_accum.add(color_sample);
             }
         }
         color_accum = color_accum.mul(1.0 / @intToFloat(f32, cfg.subpixels)).mul(1.0 / @intToFloat(f32, cfg.rays_per_subsample));
         // color_accum = color_accum.unitVector();
         // const col = color_accum.mul(255.99);
-        const col = color_accum.mul(max_val);
-        // log.debug("RGB {} {} {} color_accum: {}", .{col.x, col.y, col.z, color_accum});
+        const max_val_f = @intToFloat(f32, img.max_px_value);
+        const col = color_accum.mul(max_val_f);
 
-        assert(col.x <= max_val and col.y <= max_val and col.z <= max_val);
+        assert(col.x <= max_val_f and col.y <= max_val_f and col.z <= max_val_f);
 
-        const offset: usize = idx * px_mem_size;
-        const ascii = try rgbToAscii(allocator, col);
-        mem.copy(u8, slice[header_mem_size + offset ..], ascii);
+        const offset: usize = idx * img.px_size;
+        const ascii = try img.rgbToAscii(allocator, col);
+        mem.copy(u8, slice[img.header_size + offset ..], ascii);
 
-        root_node.completeOne();
+        // root_node.completeOne();
     }
-    root_node.end();
-    return slice;
+    // root_node.end();
+}
+
+pub fn renderMultiThread(ctx: ThreadContext) !void {
+    // This thread processes pixels from istart (included) to istop (exluded)
+    const istart = ctx.ithread * ctx.pixels_per_thread;
+    const istop = blk: {
+        if (istart + ctx.pixels_per_thread <= ctx.img.num_pixels) {
+            break :blk istart + ctx.pixels_per_thread;
+        } else {
+            break :blk ctx.img.num_pixels;
+        }
+    };
+
+    // Initialize a random generator with the same seed, for reproducibility.
+    var prng = std.rand.DefaultPrng.init(ctx.ithread);
+    log.debug("Thread {} will render pixels [{}-{})", .{ ctx.ithread, istart, istop });
+    try render(ctx.allocator, ctx.slice, &prng.random, ctx.scene, ctx.camera, ctx.cfg, ctx.img, istart, istop);
+    log.info("renderMultiThread thread {} DONE", .{ctx.ithread});
 }
 
 /// Color a pixel based on surface normals.
@@ -170,7 +112,7 @@ fn colorNormal(ray: Ray, scene: *const Scene, t_min: f32, t_max: f32, blend_star
 }
 
 /// Compute the radiance (intensity of light).
-fn radiance(r: *Random, ray: Ray, scene: *const Scene, cfg: RayTracerConfig, blend_start: Vec3f, blend_stop: Vec3f, num_rebounds: u32) Vec3f {
+fn radiance(r: *Random, ray: Ray, scene: *const Scene, cfg: *const RayTracerConfig, blend_start: Vec3f, blend_stop: Vec3f, num_rebounds: u32) Vec3f {
     const maybe_hit = scene.is_hit(ray, cfg.t_min, cfg.t_max);
     if (maybe_hit) |hit| {
         // If we've exceeded the ray bounce limit, no more light is gathered.
@@ -206,6 +148,75 @@ fn colorAlbedo(ray: Ray, scene: *const Scene, t_min: f32, t_max: f32, blend_star
         return lerp(ray.direction, blend_start, blend_stop);
     }
 }
+
+/// Struct that represents a .ppm image.
+pub const Image = struct {
+    aspect_ratio: f32,
+    // start and stop color to control the linear intepolation for the background color.
+    blend_start: Vec3f,
+    blend_stop: Vec3f,
+    // Required memory for all pixel data
+    data_size: usize,
+    // Required memory size for the .ppm image file header.
+    // P3 is 2 characters, hence 2 bytes. width, height and max_px_value can
+    // require any number of characters, then there are spaces and new lines.
+    header_size: usize,
+    height: u32,
+    // Maximum value for each color in the .ppm image (e.g. 255)
+    max_px_value: u32,
+    num_pixels: u32,
+    // Required memory for each ASCII RGB pixel in the .ppm image.
+    // Example: 255 100 200\n requires 12 units
+    px_size: usize,
+    // Required memory for the entire .ppm image (header + data)
+    size: usize,
+    width: u32,
+
+    const Self = @This();
+
+    pub fn new(width: u32, aspect_ratio: f32, max_px_value: u32) Self {
+        const height = @floatToInt(u32, @intToFloat(f32, width) / aspect_ratio);
+        const px_size = 3 * numDigits(max_px_value) + 2 * 1 + 1;
+        const header_size = 2 + 1 + numDigits(width) + 1 + numDigits(height) + 1 + numDigits(max_px_value) + 1;
+        const data_size = px_size * width * height;
+
+        return Self{
+            .aspect_ratio = aspect_ratio,
+            .blend_start = Vec3f.new(1.0, 1.0, 1.0), // white
+            .blend_stop = Vec3f.new(0.5, 0.7, 1.0), // blue
+            // .blend_stop = Vec3f.new(1.0, 0.27, 0.0), // orange
+            .data_size = data_size,
+            .header_size = header_size,
+            .height = height,
+            .max_px_value = max_px_value,
+            .num_pixels = width * height,
+            .px_size = px_size,
+            .size = header_size + data_size,
+            .width = width,
+        };
+    }
+
+    pub fn header(self: *const Self, allocator: *mem.Allocator) ![]const u8 {
+        const slice = try allocator.alloc(u8, self.header_size);
+        // P3 means this is a RGB color image in ASCII.
+        return try fmt.bufPrint(slice, "P3\n{} {}\n{}\n", .{ self.width, self.height, self.max_px_value });
+    }
+
+    /// Generate an ASCII representation of a RGB color vector.
+    ///
+    /// This ASCII string represents the color of a pixel in the .ppm image.
+    pub fn rgbToAscii(self: *const Self, allocator: *mem.Allocator, col: Vec3f) ![]const u8 {
+        const slice = try allocator.alloc(u8, self.px_size);
+        // defer allocator.free(slice);
+        const r = try colNumToString(allocator, self.max_px_value, @floatToInt(u8, col.x));
+        const g = try colNumToString(allocator, self.max_px_value, @floatToInt(u8, col.y));
+        const b = try colNumToString(allocator, self.max_px_value, @floatToInt(u8, col.z));
+        // defer allocator.free(r);
+        // defer allocator.free(g);
+        // defer allocator.free(b);
+        return try fmt.bufPrint(slice, "{} {} {}\n", .{ r, g, b });
+    }
+};
 
 // TODO: double check this linear intepolation formula.
 /// Find a point by linearly interpolating from `p0` and `p1`.
