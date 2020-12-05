@@ -17,7 +17,7 @@ const Scatter = struct {
     ray: Ray,
 };
 
-/// Random vector that falls inside a sphere of radius `r` one.
+/// Random vector that falls inside a sphere of a unit radius.
 /// This is useful when generating a random bounce ray for diffuse materials.
 /// https://raytracing.github.io/books/RayTracingInOneWeekend.html#diffusematerials
 fn randomVectorInUnitSphere(r: *Random) Vec3f {
@@ -110,7 +110,6 @@ fn refract(d: Vec3f, n: Vec3f, n1_over_n2: f32) ?Vec3f {
     assert(math.fabs(r.length() - 1.0) < epsilon);
     return r;
 }
-
 /// Schlick's approximation for reflectance.
 // https://en.wikipedia.org/wiki/Schlick%27s_approximation
 /// https://raytracing.github.io/books/RayTracingInOneWeekend.html#dielectrics/schlickapproximation
@@ -205,16 +204,14 @@ test "Scatter" {
     expectEqual(s.ray.direction.x, ray.direction.x);
 }
 
-// TODO: test for materials
-
 // TODO: test when ray cannot refract and must reflect
 // https://raytracing.github.io/books/RayTracingInOneWeekend.html#dielectrics/snell'slaw
 test "refract" {
     const d = Vec3f.new(5.0, 2.0, 0.0).unitVector();
     const n = Vec3f.new(-3.0, 2.0, 0.0).unitVector();
     const n1_over_n2 = 0.3;
-    const r = refract(d, n, n1_over_n2);
+    const r = refract(d, n, n1_over_n2) orelse unreachable;
     expect(math.fabs(r.length() - 1.0) < epsilon);
 }
 
-// TODO: test for materials
+// TODO: add tests for materials

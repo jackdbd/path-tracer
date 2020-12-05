@@ -41,7 +41,6 @@ pub const Sphere = struct {
 
     pub fn new(center: Vec3f, radius: f32, material: Material) Self {
         // assert(radius > 0.0 or @TypeOf(material._dielectric) == Dielectric);
-
         return Self{
             .center = center,
             .radius = radius,

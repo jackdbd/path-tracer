@@ -8,16 +8,18 @@ zig version `0.7.0+39336fd2e`. See [here](https://ziglang.org/download/#release-
 
 ## Build
 
-Build the executable in [debug](https://ziglang.org/documentation/master/#Debug) mode.
+Build and run the executable in [debug](https://ziglang.org/documentation/master/#Debug) mode.
 
 ```sh
 zig build run
 ```
 
-Build the executable in [release-fast](https://ziglang.org/documentation/master/#toc-ReleaseFast) mode.
+Build the executable in [release-fast](https://ziglang.org/documentation/master/#toc-ReleaseFast) mode, then run it.
 
 ```sh
-zig build run -Drelease-fast
+zig build -Drelease-fast --verbose
+# run it
+./zig-cache/bin/ray-tracing-in-one-weekend-zig
 ```
 
 ## Other

@@ -1,79 +1,125 @@
 const std = @import("std");
+const log = std.log;
+const math = std.math;
 const assert = std.debug.assert;
+const Random = std.rand.Random;
 const Ray = @import("ray.zig").Ray;
 const Vec3f = @import("vec3.zig").Vec3f;
+const epsilon = @import("constants.zig").epsilon;
 
-/// The ray that is casted from an origin, alongside a direction.
+fn degreesToRadians(deg: f32) f32 {
+    return deg * math.pi / 180.0;
+}
+
 pub const Camera = struct {
-    origin: Vec3f,
+    aperture: f32,
     aspect_ratio: f32,
+    focus_dist: f32,
+    horizontal: Vec3f,
+    lens_radius: f32,
+    lookat: Vec3f,
+    lookfrom: Vec3f,
+    lower_left_corner: Vec3f,
+    u: Vec3f,
+    v: Vec3f,
+    vertical: Vec3f,
     viewport_height: f32,
     viewport_width: f32,
-    focal_length: f32,
-    lower_left_corner: Vec3f,
-    horizontal: Vec3f,
-    vertical: Vec3f,
+    vup: Vec3f,
 
     const Self = @This();
 
     /// Create a perspective camera.
     ///
-    /// origin: the position of the camera. It's the "eye", the position from
-    /// where we look at the scene.
-    pub fn new(origin: Vec3f, aspect_ratio: f32, vh: f32, focal_length: f32) Self {
+    /// lookfrom: the "eye", the position from where we look at the scene.
+    /// lookat: the point the camera looks at.
+    /// vup: up direction of the camera. If it's not (0,1,0) the camera is tilted.
+    /// vfov: vertical field of view (in degrees).
+    /// aspect_ratio: ratio between width and height of the image the camera
+    /// will generate.
+    /// aperture: hole to control how big the camera lens is. It affects defocus
+    /// blur (aka depth of field).
+    /// focus_dist: distance between the projection point and the plane where
+    /// everything is in perfect focus.
+    pub fn new(lookfrom: Vec3f, lookat: Vec3f, vup: Vec3f, vfov: f32, aspect_ratio: f32, aperture: f32, focus_dist: f32) Self {
+        assert(math.fabs(vup.length() - 1.0) < epsilon);
+        assert(vfov > 0.0);
         assert(aspect_ratio > 0.0);
-        assert(vh > 0.0);
+        assert(aperture > 0.0);
+        assert(focus_dist > 0.0);
 
+        const theta = degreesToRadians(vfov);
+        const h = math.tan(theta / 2);
+
+        const vh = 2 * h;
         const vw = vh * aspect_ratio;
-        // std.debug.print("Aspect Ratio: {}\n", .{aspect_ratio});
-        // std.debug.print("Focal Length: {}\n", .{focal_length});
-        // std.debug.print("Viewport W: {}, H {}\n", .{ vw, vh });
 
-        const half_vw = Vec3f.new(vw / 2.0, 0.0, 0.0);
-        const half_vh = Vec3f.new(0.0, vh / 2.0, 0.0);
-        // distance from the origin of the camera and the viewport
-        const d = Vec3f.new(0.0, 0.0, focal_length);
+        // (u, v, w): orthonormal basis that describes the camera orientation.
+        const w = lookfrom.sub(lookat).unitVector();
+        const u = vup.cross(w).unitVector();
+        const v = w.cross(u);
+        assert(math.fabs(v.length() - 1.0) < epsilon);
 
-        const lower_left_corner = origin.sub(half_vw).sub(half_vh).sub(d);
-        // std.debug.print("lower_left_corner {}\n", .{lower_left_corner});
+        // log.debug("Aspect Ratio: {d:.2}", .{aspect_ratio});
+        // log.debug("Field of View (vertical, in degrees): {d:.1}", .{vfov});
+        // const exe_name = fmt.allocPrint(b.allocator, "day{:0>2}", .{ day }) catch unreachable;
+        // log.debug("Focus distance: {d:.2}", .{focus_dist});
+        // log.debug("Viewport W: {d:.2}, H {d:.2}", .{ vw, vh });
+
+        const horizontal = u.mul(vw).mul(focus_dist);
+        const vertical = v.mul(vh).mul(focus_dist);
+        const half_vw = horizontal.mul(0.5);
+        const half_vh = vertical.mul(0.5);
+        const lower_left_corner = lookfrom.sub(half_vw).sub(half_vh).sub(w.mul(focus_dist));
+
+        const lens_radius = aperture / 2.0;
 
         return Self{
-            .origin = origin,
+            .aperture = aperture,
             .aspect_ratio = aspect_ratio,
-            .focal_length = focal_length,
+            .focus_dist = focus_dist,
+            .horizontal = horizontal,
+            .lens_radius = lens_radius,
+            .lookat = lookat,
+            .lookfrom = lookfrom,
+            .lower_left_corner = lower_left_corner,
+            .u = u,
+            .v = v,
+            .vertical = vertical,
             .viewport_height = vh,
             .viewport_width = vw,
-            .lower_left_corner = lower_left_corner,
-            .horizontal = Vec3f.new(vw, 0.0, 0.0),
-            .vertical = Vec3f.new(0.0, vh, 0.0),
+            .vup = vup,
         };
     }
 
-    pub fn castRay(self: Self, u: f32, v: f32) Ray {
-        const direction = self.lower_left_corner.add(self.horizontal.mul(u).add(self.vertical.mul(v)).sub(self.origin)).unitVector();
-        return Ray.new(self.origin, direction);
+    pub fn castRay(self: Self, s: f32, t: f32, r: *Random) Ray {
+        const rd = randomVectorInUnitDisk(r).mul(self.lens_radius);
+        const offset = self.u.mul(rd.x).add(self.v.mul(rd.y));
+        const origin = self.lookfrom.add(offset);
+        const direction = self.lower_left_corner.add(self.horizontal.mul(s)).add(self.vertical.mul(t)).sub(self.lookfrom).sub(offset).unitVector();
+        assert(math.fabs(direction.length() - 1.0) < epsilon);
+        return Ray.new(origin, direction);
     }
 };
 
-// pub fn randomInUnitDisk(r: *Random) Self {
-//     return while (true) {
-//         const p = Vec3f.new(2.0 * r.float(f32) - 1.0, 2.0 * r.float(f32) - 1.0, 0.0);
-//         if (p.lengthSquared() < 1.0) {
-//             break p;
-//         }
-//     } else Vec3f.zero();
-// }
+/// Random vector that falls inside a disk of a unit radius.
+/// This is used when creating rays, so they start from a random origin that
+/// lies on the camera lens.
+/// https://raytracing.github.io/books/RayTracingInOneWeekend.html#defocusblur/generatingsamplerays
+pub fn randomVectorInUnitDisk(r: *Random) Vec3f {
+    while (true) {
+        const p = Vec3f.new(2.0 * r.float(f32) - 1.0, 2.0 * r.float(f32) - 1.0, 0.0);
+        if (p.lengthSquared() < 1.0) {
+            return p;
+        }
+    }
+}
 
 const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 
-test "Camera.new" {
-    const aspect = 16.0 / 9.0;
-    const vh = 2.0;
-    const focal_length = 1.0;
-    const camera = Camera.new(Vec3f.new(0.0, 0.0, 0.0), aspect, vh, focal_length);
-    expectEqual(camera.viewport_height, vh);
-    expectEqual(camera.viewport_width, vh * aspect);
-    expectEqual(camera.aspect_ratio, aspect);
-    expectEqual(camera.focal_length, focal_length);
+test "randomVectorInUnitDisk" {
+    // const aspect = 16.0 / 9.0;
+    var prng = std.rand.DefaultPrng.init(0);
+    const v = randomVectorInUnitDisk(&prng.random);
 }
