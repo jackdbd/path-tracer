@@ -77,6 +77,9 @@ pub fn render(allocator: *mem.Allocator, slice: []u8, r: *Random, scene: *Scene,
 }
 
 pub fn renderMultiThread(ctx: ThreadContext) !void {
+    var timer = try std.time.Timer.start();
+    const t0 = timer.lap();
+
     // This thread processes pixels from istart (included) to istop (exluded)
     const istart = ctx.ithread * ctx.pixels_per_thread;
     const istop = blk: {
@@ -87,11 +90,13 @@ pub fn renderMultiThread(ctx: ThreadContext) !void {
         }
     };
 
-    // Initialize a random generator with the same seed, for reproducibility.
     var prng = std.rand.DefaultPrng.init(ctx.ithread);
     log.debug("Thread {} will render pixels [{}-{})", .{ ctx.ithread, istart, istop });
     try render(ctx.allocator, ctx.slice, &prng.random, ctx.scene, ctx.camera, ctx.cfg, ctx.img, istart, istop);
-    log.info("renderMultiThread thread {} DONE", .{ctx.ithread});
+
+    const t1 = timer.lap();
+    const elapsed_s = @intToFloat(f64, t1 - t0) / std.time.ns_per_s;
+    log.info("renderMultiThread thread {} done. It took {d:.2} seconds", .{ ctx.ithread, elapsed_s });
 }
 
 /// Color a pixel based on surface normals.

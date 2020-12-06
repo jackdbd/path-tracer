@@ -5,9 +5,7 @@ const std = @import("std");
 pub fn ask_user() !u32 {
     const stdin = std.io.getStdIn().inStream();
     const stdout = std.io.getStdOut().outStream();
-
     var buf: [10]u8 = undefined;
-
     try stdout.print("Pick a positive integer please (e.g. 512): ", .{});
 
     if (try stdin.readUntilDelimiterOrEof(buf[0..], '\n')) |user_input| {

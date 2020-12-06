@@ -24,6 +24,15 @@ zig build -Drelease-fast --verbose
 
 ## Other
 
+CLI use, thanks to [zig-clap](https://github.com/Hejsil/zig-clap).
+
+```
+./zig-cache/bin/ray-tracing-in-one-weekend-zig 256 -s 20 --spp 100
+
+# render scene 20 in an image 256 pixels wide, use a seed of 123, and run on a single thread
+./zig-cache/bin/ray-tracing-in-one-weekend-zig 256 -s 20 --seed 123 --single
+```
+
 Format all zig code
 
 ```sh

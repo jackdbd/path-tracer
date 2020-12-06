@@ -1,0 +1,4 @@
+[submodule "src/libs/zig-clap"]
+	path = src/libs/zig-clap
+	url = git@github.com:Hejsil/zig-clap.git
+	branch = master
