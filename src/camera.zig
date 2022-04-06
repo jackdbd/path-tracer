@@ -1,15 +1,18 @@
 const std = @import("std");
 const log = std.log;
 const math = std.math;
-const assert = std.debug.assert;
 const Random = std.rand.Random;
+const pow = std.math.pow;
+
+const assert = std.debug.assert;
+const expect = std.testing.expect;
+const expectEqual = std.testing.expectEqual;
+const expectApproxEqAbs = std.testing.expectApproxEqAbs;
+
 const Ray = @import("ray.zig").Ray;
 const Vec3f = @import("vec3.zig").Vec3f;
 const epsilon = @import("constants.zig").epsilon;
-
-fn degreesToRadians(deg: f32) f32 {
-    return deg * math.pi / 180.0;
-}
+const degreesToRadians = @import("utils.zig").degreesToRadians;
 
 pub const Camera = struct {
     aperture: f32,
@@ -115,11 +118,11 @@ pub fn randomVectorInUnitDisk(r: *Random) Vec3f {
     }
 }
 
-const expect = std.testing.expect;
-const expectEqual = std.testing.expectEqual;
-
-test "randomVectorInUnitDisk" {
-    // const aspect = 16.0 / 9.0;
-    var prng = std.rand.DefaultPrng.init(0);
-    const v = randomVectorInUnitDisk(&prng.random);
+test "camera.randomVectorInUnitDisk() has length <= 1" {
+    const seed = 0;
+    var prng = std.rand.DefaultPrng.init(seed);
+    const v = randomVectorInUnitDisk(&prng.random());
+    const squared = pow(f32, v.x, 2) + pow(f32, v.y, 2) + pow(f32, v.z, 2);
+    const r = std.math.sqrt(squared);
+    try expect(r <= @as(f32, 1.0));
 }

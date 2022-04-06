@@ -10,3 +10,7 @@ pub const pi: f32 = 3.1415926535897932385;
 // https://raytracing.github.io/books/RayTracingInOneWeekend.html#surfacenormalsandmultipleobjects/anabstractionforhittableobjects
 pub const t_min = 0.0;
 pub const t_max = 1000.0;
+
+test "t_min <= t_max" {
+    try std.testing.expect(t_min <= t_max);
+}

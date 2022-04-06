@@ -5,6 +5,10 @@ const log = std.log;
 const math = std.math;
 const mem = std.mem;
 const Random = std.rand.Random;
+
+const expect = std.testing.expect;
+const expectEqual = std.testing.expectEqual;
+
 const Vec3f = @import("vec3.zig").Vec3f;
 const Ray = @import("ray.zig").Ray;
 const Material = @import("material.zig").Material;
@@ -16,7 +20,7 @@ pub const Scene = struct {
 
     const Self = @This();
 
-    pub fn init(allocator: *mem.Allocator) Self {
+    pub fn init(allocator: mem.Allocator) Self {
         return Self{ .spheres = ArrayList(Sphere).init(allocator) };
     }
 
@@ -103,9 +107,6 @@ pub const Scene = struct {
     }
 };
 
-const expect = std.testing.expect;
-const expectEqual = std.testing.expectEqual;
-
 test "Scene.init" {
     const allocator = heap.page_allocator;
     var scene = Scene.init(allocator);
@@ -117,5 +118,5 @@ test "Scene.init" {
     try scene.spheres.append(Sphere.new(Vec3f.new(0.0, 10.0, -1.0), r, material));
     try scene.spheres.append(Sphere.new(Vec3f.new(10.0, 0.0, -1.0), r * 2.0, material));
     try scene.spheres.append(Sphere.new(Vec3f.new(10.0, 10.0, -1.0), r / 2.0, material));
-    expectEqual(scene.spheres.items.len, 3);
+    try expectEqual(scene.spheres.items.len, 3);
 }

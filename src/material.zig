@@ -1,8 +1,12 @@
 const std = @import("std");
 const math = std.math;
-const assert = std.debug.assert;
 const Random = std.rand.Random;
 const DefaultPrng = std.rand.DefaultPrng;
+
+const assert = std.debug.assert;
+const expect = std.testing.expect;
+const expectEqual = std.testing.expectEqual;
+
 const Vec3f = @import("vec3.zig").Vec3f;
 const Ray = @import("ray.zig").Ray;
 const HitRecord = @import("sphere.zig").HitRecord;
@@ -184,24 +188,21 @@ pub const Material = union(enum) {
         return Material{ ._dielectric = Dielectric{ .refraction_index = refraction_index } };
     }
 
-    pub fn scatter(ray: Ray, hit: HitRecord, rand: *Random) Scatter {
+    pub fn scatter(ray: Ray, hit: HitRecord, _: *Random) Scatter {
         const s = switch (hit.material) {
-            Material._lambertian => |mat| mat.scatter(hit, &prng.random),
-            Material._metal => |mat| mat.scatter(ray, hit, &prng.random),
-            Material._dielectric => |mat| mat.scatter(ray, hit, &prng.random),
+            Material._lambertian => |mat| mat.scatter(hit, &prng.random()),
+            Material._metal => |mat| mat.scatter(ray, hit, &prng.random()),
+            Material._dielectric => |mat| mat.scatter(ray, hit, &prng.random()),
         };
         return s;
     }
 };
 
-const expect = std.testing.expect;
-const expectEqual = std.testing.expectEqual;
-
 test "Scatter" {
     const attenuation = Vec3f.new(1.0, 2.0, 3.0);
     const ray = Ray.new(Vec3f.new(0.0, 0.0, 0.0), Vec3f.new(1.0, 1.0, 1.0));
     const s = Scatter{ .attenuation = attenuation, .ray = ray };
-    expectEqual(s.ray.direction.x, ray.direction.x);
+    try expectEqual(s.ray.direction.x, ray.direction.x);
 }
 
 // TODO: test when ray cannot refract and must reflect
@@ -211,7 +212,7 @@ test "refract" {
     const n = Vec3f.new(-3.0, 2.0, 0.0).unitVector();
     const n1_over_n2 = 0.3;
     const r = refract(d, n, n1_over_n2) orelse unreachable;
-    expect(math.fabs(r.length() - 1.0) < epsilon);
+    try expect(math.fabs(r.length() - 1.0) < epsilon);
 }
 
 // TODO: add tests for materials

@@ -1,10 +1,26 @@
 # Ray Tracing in one weekend in zig
 
+[![CI](https://github.com/jackdbd/path-tracer/actions/workflows/ci.yaml/badge.svg)](https://github.com/jackdbd/path-tracer/actions/workflows/ci.yaml)
+
 Implementation of Peter Shirley's [Ray Tracing in One Weekend](https://github.com/RayTracing/raytracing.github.io) book in the Zig programming language.
 
-## Dependencies
+Tested on Zig version **0.9.1**.
 
-zig version `0.7.0+39336fd2e`. See [here](https://ziglang.org/download/#release-master).
+## Installation
+
+Clone the repo and jump into it:
+
+```sh
+git clone git@github.com:jackdbd/path-tracer.git
+cd path-tracer
+```
+
+In order to use this library and run the examples you will need zig version **0.9.1**. You can get it using [zigup](https://github.com/marler8997/zigup):
+
+```sh
+zigup fetch 0.9.1
+zigup 0.9.1
+```
 
 ## Build
 
@@ -14,24 +30,30 @@ Build and run the executable in [debug](https://ziglang.org/documentation/master
 zig build run
 ```
 
-Build the executable in [release-fast](https://ziglang.org/documentation/master/#toc-ReleaseFast) mode, then run it.
+Build the executable in [release-fast](https://ziglang.org/documentation/master/#ReleaseFast) mode, then run it.
 
 ```sh
 zig build -Drelease-fast --verbose
 # run it
-./zig-cache/bin/ray-tracing-in-one-weekend-zig
+./zig-out/bin/ray-tracing-in-one-weekend-zig
+```
+
+## Tests
+
+Run all tests:
+
+```sh
+zig build test
+```
+
+Otherwise, run all tests defined in a single file:
+
+```sh
+zig test src/material.zig
+zig test src/utils.zig
 ```
 
 ## Other
-
-CLI use, thanks to [zig-clap](https://github.com/Hejsil/zig-clap).
-
-```
-./zig-cache/bin/ray-tracing-in-one-weekend-zig 256 -s 20 --spp 100
-
-# render scene 20 in an image 256 pixels wide, use a seed of 123, and run on a single thread
-./zig-cache/bin/ray-tracing-in-one-weekend-zig 256 -s 20 --seed 123 --single
-```
 
 Format all zig code
 
@@ -39,8 +61,10 @@ Format all zig code
 zig fmt src
 ```
 
-Run all tests
+## TODO
 
-```sh
-zig build test
-```
+- convert rendered scenes from .ppm => .png and showcase them in the README
+- fix multithreading example
+- implement example with async/await
+- generate docs with `zig test src/utils.zig -femit-docs=./docs` or another command
+- fix issues tieh zig-clap and zigmod

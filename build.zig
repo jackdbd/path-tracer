@@ -25,13 +25,34 @@ pub fn build(b: *Builder) void {
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
-    // const tests = b.addTest("src/camera.zig");
-    // tests = b.addTest("src/ray.zig");
-    const tests = b.addTest("src/sphere.zig");
-    // tests = b.addTest("src/utils.zig");
-    // tests = b.addTest("src/vector.zig");
-    tests.setBuildMode(mode);
+    var camera_tests = b.addTest("src/camera.zig");
+    var material_tests = b.addTest("src/material.zig");
+    var multithreading_tests = b.addTest("src/multithreading.zig");
+    var ppm_image_tests = b.addTest("src/ppm_image.zig");
+    var ray_tests = b.addTest("src/ray.zig");
+    var scene_tests = b.addTest("src/scene.zig");
+    var sphere_tests = b.addTest("src/sphere.zig");
+    var utils_tests = b.addTest("src/utils.zig");
+    var vec3_tests = b.addTest("src/vec3.zig");
+    
+    camera_tests.setBuildMode(mode);
+    material_tests.setBuildMode(mode);
+    multithreading_tests.setBuildMode(mode);
+    ppm_image_tests.setBuildMode(mode);
+    ray_tests.setBuildMode(mode);
+    scene_tests.setBuildMode(mode);
+    sphere_tests.setBuildMode(mode);
+    utils_tests.setBuildMode(mode);
+    vec3_tests.setBuildMode(mode);
 
-    const test_step = b.step("test", "Run tests");
-    test_step.dependOn(&tests.step);
+    const test_step = b.step("test", "Run library tests");
+    test_step.dependOn(&camera_tests.step);
+    test_step.dependOn(&material_tests.step);
+    test_step.dependOn(&multithreading_tests.step);
+    test_step.dependOn(&ppm_image_tests.step);
+    test_step.dependOn(&ray_tests.step);
+    test_step.dependOn(&scene_tests.step);
+    test_step.dependOn(&sphere_tests.step);
+    test_step.dependOn(&utils_tests.step);
+    test_step.dependOn(&vec3_tests.step);
 }

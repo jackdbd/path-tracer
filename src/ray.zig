@@ -26,7 +26,7 @@ const expectEqual = std.testing.expectEqual;
 test "Ray.pointAt" {
     const r = Ray.new(Vec3f.new(0.0, 0.0, 0.0), Vec3f.new(1.0, 1.0, 1.0));
     const p = r.pointAt(1.0);
-    expectEqual(p.x, 1.0);
-    expectEqual(p.y, 1.0);
-    expectEqual(p.z, 1.0);
+    try expectEqual(p.x, 1.0);
+    try expectEqual(p.y, 1.0);
+    try expectEqual(p.z, 1.0);
 }
