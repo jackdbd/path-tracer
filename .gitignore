@@ -9,6 +9,7 @@ docs/
 
 images/*
 !images/README.md
+!images/demo.png
 !images/demo.ppm
 
 zig-cache/

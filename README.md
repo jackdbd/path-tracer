@@ -6,6 +6,8 @@ Implementation of Peter Shirley's [Ray Tracing in One Weekend](https://github.co
 
 Tested on Zig version **0.9.1**.
 
+![scene 21 rendered with 150 samples per pixel, depth 6, seed 456](./images/demo.png)
+
 ## Installation
 
 Clone the repo and jump into it:
