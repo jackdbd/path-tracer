@@ -78,7 +78,7 @@ pub const Sphere = struct {
             // return (-b - math.sqrt(discriminant) ) / (2.0*a);
             const sqrtd = math.sqrt(discriminant);
             const x1 = (-half_b - sqrtd) / a;
-            const x2 = (-half_b + sqrtd) / a;
+            // const x2 = (-half_b + sqrtd) / a;
 
             // For now let's ignore the solution x2
             const t = x1;
@@ -110,7 +110,7 @@ test "Sphere.new" {
     const radius = 5.0;
     const albedo = Vec3f.new(1.0, 2.0, 3.0);
     const sphere = Sphere.new(center, radius, Material.lambertian(albedo));
-    expectEqual(sphere.center.x, center.x);
+    try expectEqual(sphere.center.x, center.x);
 }
 
 test "Sphere.is_hit" {
@@ -122,16 +122,16 @@ test "Sphere.is_hit" {
     // a ray starting from the camera eye (0,0,0)
     const ray_origin = Vec3f.new(0.0, 0.0, 0.0);
     // remember that a ray's direction is a vector of length 1
-    const dir_1 = Vec3f.new(0.0, 0.0, -1.0);
+    // const dir_1 = Vec3f.new(0.0, 0.0, -1.0);
     const dir_2 = Vec3f.new(0.0, 1.0, 0.0);
-    const ray_1 = Ray.new(ray_origin, dir_1);
+    // const ray_1 = Ray.new(ray_origin, dir_1);
     const ray_2 = Ray.new(ray_origin, dir_2);
     const t_min = 0.001;
     const t_max = 10000.0;
 
-    const x = sphere.is_hit(ray_1, t_min, t_max);
+    // const x = sphere.is_hit(ray_1, t_min, t_max);
     // expect(x != -1.0);
-    expectEqual(sphere.is_hit(ray_2, t_min, t_max), null);
+    try expectEqual(sphere.is_hit(ray_2, t_min, t_max), null);
     // TODO: the ray is a half-line, so this ray should NOT hit the sphere
     // because it is traveling in the opposite direction.
     // const dir_3 = Vec3f.new(0.0, 0.0, 1.0);

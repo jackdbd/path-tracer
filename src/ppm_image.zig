@@ -6,6 +6,10 @@ const log = std.log;
 const math = std.math;
 const mem = std.mem;
 const Random = std.rand.Random;
+const assert = std.debug.assert;
+const expect = std.testing.expect;
+const expectEqual = std.testing.expectEqual;
+
 const Vec3f = @import("vec3.zig").Vec3f;
 const Scene = @import("scene.zig").Scene;
 const Ray = @import("ray.zig").Ray;
@@ -14,29 +18,13 @@ const Material = @import("material.zig").Material;
 const RayTracerConfig = @import("raytracer.zig").RayTracerConfig;
 const ThreadContext = @import("multithreading.zig").ThreadContext;
 const epsilon = @import("constants.zig").epsilon;
-const numDigits = @import("utils.zig").numDigits;
-const assert = std.debug.assert;
+const utils = @import("utils.zig");
+const colNumToString = utils.colNumToString;
+const numDigits = utils.numDigits;
 
-/// Convert a color from a numeric value to a padded ASCII string.
-fn colNumToString(allocator: *mem.Allocator, max_value: u32, value: u8) ![]const u8 {
-    const slice = try allocator.alloc(u8, numDigits(max_value));
-    // TODO: adopt generic leftpad algorithm, to pad any number of spaces.
-    switch (value) {
-        0...9 => {
-            return try fmt.bufPrint(slice, "  {}", .{value});
-        },
-        10...99 => {
-            return try fmt.bufPrint(slice, " {}", .{value});
-        },
-        else => {
-            return try fmt.bufPrint(slice, "{}", .{value});
-        },
-    }
-}
-
-pub fn render(allocator: *mem.Allocator, slice: []u8, r: *Random, scene: *Scene, camera: *Camera, cfg: *const RayTracerConfig, img: *const Image, istart: u32, istop: u32) !void {
+pub fn render(allocator: *mem.Allocator, slice: []u8, r: *Random, scene: *Scene, camera: *Camera, cfg: *const RayTracerConfig, img: *const Image, istart: usize, istop: usize) !void {
     // log.debug("render pixels [{}-{})", .{ istart, istop });
-    var idx: u32 = istart;
+    var idx: usize = istart;
     // var progress = std.Progress{};
     // const root_node = try progress.start("Render loop", istop + 1);
     while (idx < istop) : (idx += 1) {
@@ -92,7 +80,7 @@ pub fn renderMultiThread(ctx: ThreadContext) !void {
 
     var prng = std.rand.DefaultPrng.init(ctx.ithread);
     log.debug("Thread {} will render pixels [{}-{})", .{ ctx.ithread, istart, istop });
-    try render(ctx.allocator, ctx.slice, &prng.random, ctx.scene, ctx.camera, ctx.cfg, ctx.img, istart, istop);
+    try render(ctx.allocator, ctx.slice, &prng.random(), ctx.scene, ctx.camera, ctx.cfg, ctx.img, istart, istop);
 
     const t1 = timer.lap();
     const elapsed_s = @intToFloat(f64, t1 - t0) / std.time.ns_per_s;
@@ -166,21 +154,21 @@ pub const Image = struct {
     // P3 is 2 characters, hence 2 bytes. width, height and max_px_value can
     // require any number of characters, then there are spaces and new lines.
     header_size: usize,
-    height: u32,
+    height: usize,
     // Maximum value for each color in the .ppm image (e.g. 255)
-    max_px_value: u32,
-    num_pixels: u32,
+    max_px_value: usize,
+    num_pixels: usize,
     // Required memory for each ASCII RGB pixel in the .ppm image.
     // Example: 255 100 200\n requires 12 units
     px_size: usize,
     // Required memory for the entire .ppm image (header + data)
     size: usize,
-    width: u32,
+    width: usize,
 
     const Self = @This();
 
-    pub fn new(width: u32, aspect_ratio: f32, max_px_value: u32) Self {
-        const height = @floatToInt(u32, @intToFloat(f32, width) / aspect_ratio);
+    pub fn new(width: usize, aspect_ratio: f32, max_px_value: u32) Self {
+        const height = @floatToInt(usize, @intToFloat(f32, width) / aspect_ratio);
         const px_size = 3 * numDigits(max_px_value) + 2 * 1 + 1;
         const header_size = 2 + 1 + numDigits(width) + 1 + numDigits(height) + 1 + numDigits(max_px_value) + 1;
         const data_size = px_size * width * height;
@@ -204,7 +192,7 @@ pub const Image = struct {
     pub fn header(self: *const Self, allocator: *mem.Allocator) ![]const u8 {
         const slice = try allocator.alloc(u8, self.header_size);
         // P3 means this is a RGB color image in ASCII.
-        return try fmt.bufPrint(slice, "P3\n{} {}\n{}\n", .{ self.width, self.height, self.max_px_value });
+        return try fmt.bufPrint(slice, "P3\n{d} {d}\n{d}\n", .{ self.width, self.height, self.max_px_value });
     }
 
     /// Generate an ASCII representation of a RGB color vector.
@@ -219,7 +207,7 @@ pub const Image = struct {
         // defer allocator.free(r);
         // defer allocator.free(g);
         // defer allocator.free(b);
-        return try fmt.bufPrint(slice, "{} {} {}\n", .{ r, g, b });
+        return try fmt.bufPrint(slice, "{s} {s} {s}\n", .{ r, g, b });
     }
 };
 
@@ -234,39 +222,31 @@ pub fn lerp(u: Vec3f, p0: Vec3f, p1: Vec3f) Vec3f {
     return p0.mul(1.0 - t).add(p1.mul(t));
 }
 
-const expect = std.testing.expect;
-const expectEqual = std.testing.expectEqual;
-
-test "ppm_image.colNumToString" {
-    const allocator = std.testing.allocator;
-    var s = try colNumToString(allocator, @as(u8, 255));
-    defer allocator.free(s);
-    // std.debug.print("colNumToString: {}\n", .{s});
-    // TODO: how to check s?
-    // expectEqual("255", &s);
-}
-
 // TODO: this test leaks memory. Is the memory leak it in tgbToAscii?
-test "ppm_image.rgbToAscii" {
-    // const allocator = std.testing.page_allocator;
-    // var arena_allocator = std.heap.ArenaAllocator.init(allocator);
-    const allocator = std.testing.allocator;
-    const ascii = try rgbToAscii(allocator, Vec3f.new(255, 10, 0));
-    // defer arena_allocator.deinit();
-    // defer allocator.free(ascii);
+test "ppm_image.rgbToAscii()" {
+    var allocator = std.heap.page_allocator;
+    // var allocator = std.testing.allocator; // this shows that there is a leak
+
+    const width: usize = 100;
+    const aspect_ratio: usize = @as(f32, 16 / 9);
+    const max_px_value: u32 = 255;
+    const image = Image.new(width, aspect_ratio, max_px_value);
+
+    const ascii = try image.rgbToAscii(&allocator, Vec3f.new(255, 10, 0));
+    defer allocator.free(ascii);
     // std.debug.print("ASCII line\n{}\n", .{ascii});
-    expectEqual(ascii[0], 50); // 2
-    expectEqual(ascii[1], 53); // 5
-    expectEqual(ascii[2], 53); // 5
-    expectEqual(ascii[3], 32); // space
-    expectEqual(ascii[4], 32); // space (leftpad)
-    expectEqual(ascii[5], 49); // 1
-    expectEqual(ascii[6], 48); // 0
-    expectEqual(ascii[7], 32); // space
-    expectEqual(ascii[8], 32); // space (leftpad)
-    expectEqual(ascii[9], 32); // space (leftpad)
-    expectEqual(ascii[10], 48); // 0
-    expectEqual(ascii[11], 10); // \n
+    try expectEqual(ascii[0], 50); // 2
+    try expectEqual(ascii[1], 53); // 5
+    try expectEqual(ascii[2], 53); // 5
+    try expectEqual(ascii[3], 32); // space
+    try expectEqual(ascii[4], 32); // space (leftpad)
+    try expectEqual(ascii[5], 49); // 1
+    try expectEqual(ascii[6], 48); // 0
+    try expectEqual(ascii[7], 32); // space
+    try expectEqual(ascii[8], 32); // space (leftpad)
+    try expectEqual(ascii[9], 32); // space (leftpad)
+    try expectEqual(ascii[10], 48); // 0
+    try expectEqual(ascii[11], 10); // \n
 }
 
 test "lerp" {
@@ -274,6 +254,6 @@ test "lerp" {
     const start = Vec3f.new(1.0, 1.0, 1.0); // white
     const stop = Vec3f.new(0.5, 0.7, 1.0); // blue
     const v = lerp(direction, start, stop);
-    expect(v.x > 0.0 and v.x < 1.0);
-    expect(v.y > 0.0 and v.y < 1.0);
+    try expect(v.x > 0.0 and v.x < 1.0);
+    try expect(v.y > 0.0 and v.y < 1.0);
 }

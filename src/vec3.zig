@@ -96,9 +96,9 @@ const expectEqual = std.testing.expectEqual;
 
 test "Vec3f.new" {
     const v = Vec3f.new(1.0, 2.0, 3.0);
-    expectEqual(v.x, 1.0);
-    expectEqual(v.y, 2.0);
-    expectEqual(v.z, 3.0);
+    try expectEqual(v.x, 1.0);
+    try expectEqual(v.y, 2.0);
+    try expectEqual(v.z, 3.0);
 }
 
 test "Vec3.length" {
@@ -107,54 +107,54 @@ test "Vec3.length" {
     const z = 5.0;
     const expected = math.sqrt(math.pow(f32, x, 2) + math.pow(f32, y, 2) + math.pow(f32, z, 2));
     const v = Vec3f.new(x, y, z);
-    expectEqual(v.length(), expected);
+    try expectEqual(v.length(), expected);
 }
 
 test "Vec3f.add" {
     const a = Vec3f.new(1.0, 2.0, 3.0);
     const b = Vec3f.new(2.0, 3.0, 4.0);
     const v = a.add(b);
-    expectEqual(v.x, 3.0);
-    expectEqual(v.y, 5.0);
-    expectEqual(v.z, 7.0);
+    try expectEqual(v.x, 3.0);
+    try expectEqual(v.y, 5.0);
+    try expectEqual(v.z, 7.0);
 }
 
 test "Vec3f.sub" {
     const a = Vec3f.new(2.0, 3.0, 4.0);
     const b = Vec3f.new(2.0, 4.0, 3.0);
     const v = a.sub(b);
-    expectEqual(v.x, 0.0);
-    expectEqual(v.y, -1.0);
-    expectEqual(v.z, 1.0);
+    try expectEqual(v.x, 0.0);
+    try expectEqual(v.y, -1.0);
+    try expectEqual(v.z, 1.0);
 }
 
 test "unitVector" {
     const v = Vec3f.new(1.0, 2.0, 3.0);
-    expect(math.fabs(v.unitVector().length() - 1.0) < epsilon);
+    try expect(math.fabs(v.unitVector().length() - 1.0) < epsilon);
 }
 
 test "dot product" {
     const a = Vec3f.new(2.0, 3.0, 4.0);
     const b = Vec3f.new(5.0, 6.0, 7.0);
     const res = a.dot(b);
-    expect(res - 56 < epsilon);
-    expectEqual(res, 56);
+    try expect(res - 56 < epsilon);
+    try expectEqual(res, 56);
 }
 
 test "cross product" {
     const a = Vec3f.new(1.0, 0.0, 2.0);
     const b = Vec3f.new(2.0, 1.0, 2.0);
     const v = a.cross(b);
-    expectEqual(v.x, -2.0);
-    expectEqual(v.y, 2.0);
-    expectEqual(v.z, 1.0);
+    try expectEqual(v.x, -2.0);
+    try expectEqual(v.y, 2.0);
+    try expectEqual(v.z, 1.0);
 }
 
 test "Vec3f.elementwiseMul" {
     const a = Vec3f.new(2.0, 3.0, 4.0);
     const b = Vec3f.new(3.0, 4.0, 5.0);
     const v = a.elementwiseMul(b);
-    expectEqual(v.x, 6.0);
-    expectEqual(v.y, 12.0);
-    expectEqual(v.z, 20.0);
+    try expectEqual(v.x, 6.0);
+    try expectEqual(v.y, 12.0);
+    try expectEqual(v.z, 20.0);
 }

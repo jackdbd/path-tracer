@@ -1,0 +1,6 @@
+id: dcm4cf4xaiq6udel8zsdf0f7e5c228c7ewckc5wqf23r1kdv
+name: path-tracer
+license: MIT
+description: Implementation of Peter Shirley's Ray Tracing in One Weekend book in the Zig programming language.
+root_dependencies:
+  - src: git https://github.com/Hejsil/zig-clap
