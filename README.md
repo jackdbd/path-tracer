@@ -66,8 +66,8 @@ zig fmt src
 
 ## TODO
 
-- convert rendered scenes from .ppm => .png and showcase them in the README
-- fix multithreading example
-- implement example with async/await
-- generate docs with `zig test src/utils.zig -femit-docs=./docs` or another command
-- fix issues tieh zig-clap and zigmod
+- implement example with [async and await](https://ziglang.org/documentation/master/#Async-and-Await)
+- implement more scenes
+- improve documentation about Monte Carlo path tracing algorithm and global illumination model
+- generate docs with `zig test src/utils.zig -femit-docs=./docs` or similar command
+- fix issues with zig-clap
