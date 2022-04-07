@@ -53,6 +53,7 @@ Otherwise, run all tests defined in a single file:
 ```sh
 zig test src/material.zig
 zig test src/utils.zig
+zig test src/render_targets/ppm_image.zig --main-pkg-path ./src
 ```
 
 ## Other

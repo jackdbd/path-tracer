@@ -1,7 +1,7 @@
 const std = @import("std");
-const Vec3f = @import("vec3.zig").Vec3f;
+const Vec3f = @import("./vec3.zig").Vec3f;
 
-/// The ray that is casted from an origin, alongside a direction.
+/// The ray that is casted from an `origin`, alongside a `direction`.
 pub const Ray = struct {
     origin: Vec3f,
     direction: Vec3f,

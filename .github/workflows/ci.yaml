@@ -28,6 +28,13 @@ jobs:
         uses: goto-bus-stop/setup-zig@v1.3.0
         with:
           version: ${{ matrix.zig-version }}
+      - name: Setup Zigmod
+        uses: nektro/actions-setup-zigmod@v1.0.0
+      - name: Print licenses
+        run: zigmod license
+      - name: Fetch dependencies and generate deps.zig
+        # https://github.com/nektro/zigmod/blob/master/docs/deps.zig.md
+        run: zigmod ci
       # - name: Debug zig version
       #   run: which zig && zig version
       - name: Build the path tracer in ${{ matrix.build-mode }}

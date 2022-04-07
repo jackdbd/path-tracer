@@ -9,11 +9,12 @@ const Random = std.rand.Random;
 const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 
-const Vec3f = @import("vec3.zig").Vec3f;
-const Ray = @import("ray.zig").Ray;
-const Material = @import("material.zig").Material;
-const Sphere = @import("sphere.zig").Sphere;
-const HitRecord = @import("sphere.zig").HitRecord;
+const UserError = @import("./errors.zig").UserError;
+const Vec3f = @import("./vec3.zig").Vec3f;
+const Ray = @import("./ray.zig").Ray;
+const Material = @import("./material.zig").Material;
+const Sphere = @import("./sphere.zig").Sphere;
+const HitRecord = @import("./sphere.zig").HitRecord;
 
 pub const Scene = struct {
     spheres: ArrayList(Sphere),
@@ -30,11 +31,11 @@ pub const Scene = struct {
 
     fn sceneImage18_19_20(self: *Scene, n: u8) !void {
         if (n == 18) {
-            log.debug("Image 18: A distant view", .{});
+            log.info("Image 18: A distant view", .{});
         } else if (n == 19) {
-            log.debug("Image 19: Zooming in", .{});
+            log.info("Image 19: Zooming in", .{});
         } else {
-            log.debug("Image 20: Spheres with depth-of-field", .{});
+            log.info("Image 20: Spheres with depth-of-field", .{});
         }
         const material_ground = Material.lambertian(Vec3f.new(0.8, 0.8, 0.0));
         const material_center = Material.lambertian(Vec3f.new(0.1, 0.2, 0.5));
@@ -49,7 +50,7 @@ pub const Scene = struct {
     }
 
     fn sceneImage21(self: *Scene, r: *Random) !void {
-        log.debug("Image 21: Final scene", .{});
+        log.info("Image 21: Final scene", .{});
         const ground_material = Material.lambertian(Vec3f.new(0.5, 0.5, 0.5));
         try self.spheres.append(Sphere.new(Vec3f.new(0, -1000, 0), 1000, ground_material));
 
@@ -85,8 +86,10 @@ pub const Scene = struct {
     pub fn setupScene(self: *Scene, r: *Random, n: u8) !void {
         if (n == 18 or n == 19 or n == 20) {
             try self.sceneImage18_19_20(n);
-        } else {
+        } else if (n == 21) {
             try self.sceneImage21(r);
+        } else {
+            return UserError.SceneNotAvailable;
         }
     }
 
