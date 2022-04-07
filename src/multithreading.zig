@@ -4,10 +4,10 @@ const mem = std.mem;
 const assert = std.debug.assert;
 const expect = std.testing.expect;
 
-const Image = @import("ppm_image.zig").Image;
-const Camera = @import("camera.zig").Camera;
-const Scene = @import("scene.zig").Scene;
-const RayTracerConfig = @import("raytracer.zig").RayTracerConfig;
+const Image = @import("./render_targets/ppm_image.zig").Image;
+const Camera = @import("./camera.zig").Camera;
+const Scene = @import("./scene.zig").Scene;
+const RayTracerConfig = @import("./raytracer.zig").RayTracerConfig;
 
 pub const ThreadContext = struct {
     allocator: *mem.Allocator,

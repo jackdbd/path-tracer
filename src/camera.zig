@@ -14,6 +14,7 @@ const Vec3f = @import("vec3.zig").Vec3f;
 const epsilon = @import("constants.zig").epsilon;
 const degreesToRadians = @import("utils.zig").degreesToRadians;
 
+/// A perspective camera.
 pub const Camera = struct {
     aperture: f32,
     aspect_ratio: f32,

@@ -4,3 +4,4 @@ license: MIT
 description: Implementation of Peter Shirley's Ray Tracing in One Weekend book in the Zig programming language.
 root_dependencies:
   - src: git https://github.com/Hejsil/zig-clap
+  - src: git https://github.com/nektro/zig-inquirer

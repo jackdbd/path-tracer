@@ -1,12 +1,13 @@
 const std = @import("std");
 const math = std.math;
 const assert = std.debug.assert;
-const vec3 = @import("vec3.zig");
+
+const vec3 = @import("./vec3.zig");
 const Vec3f = vec3.Vec3f;
-const Ray = @import("ray.zig").Ray;
-const Material = @import("material.zig").Material;
-const Dielectric = @import("material.zig").Dielectric;
-const epsilon = @import("constants.zig").epsilon;
+const Ray = @import("./ray.zig").Ray;
+const Material = @import("./material.zig").Material;
+const Dielectric = @import("./material.zig").Dielectric;
+const epsilon = @import("./constants.zig").epsilon;
 
 /// Record that represents a hit by a ray.
 ///
